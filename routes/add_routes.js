@@ -6,7 +6,7 @@ const upload = require('../middlewares/multer');
 
 // Single image upload route
 router.post(
-  '/',
+  '/createads',
   protect,
   upload.single('image'),
   uploadController.uploadImage

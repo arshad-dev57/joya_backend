@@ -1,5 +1,5 @@
 const Vendor = require('../models/vendor');
-const cloudinary = require('../config/cloudinary');
+
 exports.createVendor = async (req, res) => {
   try {
     const {
@@ -18,10 +18,8 @@ exports.createVendor = async (req, res) => {
     let imageUrl = null;
 
     if (req.file) {
-      const result = await cloudinary.uploader.upload(req.file.path, {
-        folder: 'vendors'
-      });
-      imageUrl = result.secure_url;
+      // Multer Cloudinary returns URL directly
+      imageUrl = req.file.path || req.file.secure_url || req.file.url;
     }
 
     // ✅ Safe handling of url field
@@ -128,6 +126,26 @@ exports.getVendorsByServiceAndCountry = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Internal Server Error'
+    });
+  }
+};
+
+exports.getAllVendors = async (req, res) => {
+  try {
+    console.log("Fetching vendors...");
+    const vendors = await Vendor.find(); 
+    console.log("Vendors fetched:", vendors.length);
+    res.status(200).json({
+      success: true,
+      message: 'Vendors fetched successfully',
+      count: vendors.length,
+      data: vendors
+    });
+  } catch (error) {
+    console.error('[Get All Vendors Error]', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
     });
   }
 };

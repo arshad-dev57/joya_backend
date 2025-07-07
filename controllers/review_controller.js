@@ -20,12 +20,14 @@ exports.addReview = async (req, res) => {
       comment,
       rating
     });
-
+        const populatedReview = await Review.findById(review._id).populate('userId', 'email');
+    
     res.status(201).json({
       success: true,
       message: 'Review added successfully',
-      data: review
+      data: populatedReview
     });
+
   } catch (error) {
     console.error('[Add Review Error]', error);
     res.status(500).json({
