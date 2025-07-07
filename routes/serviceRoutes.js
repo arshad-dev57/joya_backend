@@ -5,7 +5,7 @@ const upload = require('../middlewares/multer');
 const { protect } = require('../middlewares/authmiddleware');
 
 // Create service
-router.post('/create', protect, upload.single('imageUrl'), serviceController.createService);
+router.post('/createservice', protect, upload.single('imageUrl'), serviceController.createService);
 router.get('/getservices', serviceController.getAllServices);
 
 module.exports = router;

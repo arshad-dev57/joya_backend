@@ -9,4 +9,6 @@ router.post('/signup', userController.signup);
 router.post('/login', loginController.login);
 router.get('/profile', protect, profilecontroller.getProfile);
 router.post('/logout', protect, userController.logout);
+router.get('/getallusers', userController.getAllUsers);
+
 module.exports = router;

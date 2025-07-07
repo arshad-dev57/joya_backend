@@ -6,4 +6,6 @@ const { protect } = require('../middlewares/authmiddleware');
 
 router.post('/create', protect, parser.single('image'), vendorController.createVendor);
 router.get('/getmyvendors', protect, vendorController.getVendorsByServiceAndCountry);
+router.get('/getallvendors', vendorController.getAllVendors);
+
 module.exports = router;

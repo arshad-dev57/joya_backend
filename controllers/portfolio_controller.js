@@ -3,10 +3,24 @@ const cloudinary = require('../config/cloudinary');
 
 exports.createPortfolio = async (req, res) => {
   try {
-    console.log('REQ.BODY:', req.body);
-    console.log('REQ.FILES:', req.files);
-
-    const { title, description, services } = req.body;
+    const {
+      title,
+      description,
+      serviceType,
+      skillsUsed,
+      highlights,
+      challengesFaced,
+      location,
+      date,
+      duration,
+      videoLinks,
+      equipmentUsed,
+      clientType,
+      selfNote,
+      ratings,
+      isPracticeProject,
+      contactEnabled
+    } = req.body;
 
     if (!title) {
       return res.status(400).json({
@@ -15,8 +29,8 @@ exports.createPortfolio = async (req, res) => {
       });
     }
 
+    // Upload multiple images
     let uploadedImages = [];
-
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
         const result = await cloudinary.uploader.upload(file.path, {
@@ -26,33 +40,26 @@ exports.createPortfolio = async (req, res) => {
       }
     }
 
-    let parsedServices = [];
-    if (services) {
-      try {
-        parsedServices = JSON.parse(services);
-        if (!Array.isArray(parsedServices)) {
-          return res.status(400).json({
-            success: false,
-            message: 'Services must be an array'
-          });
-        }
-      } catch (e) {
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid services format. Must be a JSON array.',
-        });
-      }
-    }
-
     const portfolio = await Portfolio.create({
       title,
       description,
+      serviceType,
+      skillsUsed: parseJson(skillsUsed),
+      highlights,
+      challengesFaced,
+      location,
+      date,
+      duration,
       images: uploadedImages,
-      services: parsedServices,
+      videoLinks: parseJson(videoLinks),
+      equipmentUsed: parseJson(equipmentUsed),
+      clientType,
+      selfNote,
+      ratings: ratings ? Number(ratings) : undefined,
+      isPracticeProject: isPracticeProject === 'true',
+      contactEnabled: contactEnabled !== 'false', // default true
       createdBy: req.user._id
     });
-
-    console.log(portfolio);
 
     res.status(201).json({
       success: true,
@@ -60,14 +67,24 @@ exports.createPortfolio = async (req, res) => {
       data: portfolio
     });
   } catch (error) {
-    console.error('[Portfolio Create Error]', error);
+    console.error('[Create Portfolio Error]', error);
     res.status(500).json({
       success: false,
-      message: error.message,
-      stack: error.stack
+      message: error.message
     });
   }
 };
+
+// Helper to safely parse array strings from JSON
+function parseJson(value) {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
 
 
 exports.getUserPortfolios = async (req, res) => {

@@ -1,3 +1,4 @@
+const jwt = require('jsonwebtoken'); // 👈 Make sure this is imported
 const User = require('../models/usersmodel');
 
 exports.signup = async (req, res) => {
@@ -59,21 +60,32 @@ exports.signup = async (req, res) => {
       role,
       firstname,
       lastname,
-      password,          // plain save karo → Model pre-save hash karega
+      password,       
       phone: cleanPhone
     });
 
     await user.save();
 
+    // ✅ Generate JWT Token
+    const payload = {
+      userId: user._id,
+      role: user.role
+    };
+
+    const token = jwt.sign(payload, process.env.JWT_SECRET, {
+      expiresIn: process.env.JWT_EXPIRES_IN
+    });
+
     res.status(201).json({
       success: true,
       message: 'User registered successfully',
+      token,
       data: {
         id: user._id,
         username: user.username,
         email: user.email,
         role: user.role,
-        phone: user.phone
+        country: user.country
       }
     });
 
@@ -98,6 +110,24 @@ exports.logout = async (req, res) => {
     res.status(500).json({
       success: false,
       message: error.message
+    });
+  }
+};
+
+
+exports.getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find().select('-password'); 
+    res.status(200).json({
+      success: true,
+      message: 'Users fetched successfully',
+      data: users
+    });
+  } catch (error) {
+    console.error('[Get Users Error]', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
     });
   }
 };

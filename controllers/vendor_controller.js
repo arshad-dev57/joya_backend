@@ -131,3 +131,22 @@ exports.getVendorsByServiceAndCountry = async (req, res) => {
     });
   }
 };
+exports.getAllVendors = async (req, res) => {
+  try {
+    console.log("Fetching vendors...");
+    const vendors = await Vendor.find(); // 👈 no populate
+    console.log("Vendors fetched:", vendors.length);
+    res.status(200).json({
+      success: true,
+      message: 'Vendors fetched successfully',
+      count: vendors.length,
+      data: vendors
+    });
+  } catch (error) {
+    console.error('[Get All Vendors Error]', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
