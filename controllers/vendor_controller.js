@@ -1,4 +1,5 @@
-const Vendor = require('../models/vendor');
+const Vendor = require('../models/Vendor');
+const cloudinary = require('../config/cloudinary');
 
 exports.createVendor = async (req, res) => {
   try {
@@ -15,59 +16,74 @@ exports.createVendor = async (req, res) => {
       services
     } = req.body;
 
+    console.log("[DEBUG] Incoming Fields:", req.body);
+    console.log("[DEBUG] Incoming Files:", Object.keys(req.files || {}));
+
     let imageUrl = null;
 
-    if (req.file) {
-      // Multer Cloudinary returns URL directly
-      imageUrl = req.file.path || req.file.secure_url || req.file.url;
+    // ✅ Upload main image if exists
+    if (req.files?.image?.[0]) {
+      const uploadResult = await cloudinary.uploader.upload(
+        req.files.image[0].path,
+        {
+          folder: "vendors/main_images",
+        }
+      );
+      imageUrl = uploadResult.secure_url;
+      console.log("[Cloudinary] Main image uploaded:", imageUrl);
+    } else {
+      console.log("[Cloudinary] No main image uploaded.");
     }
 
-    // ✅ Safe handling of url field
+    // ✅ Parse `url` (social links)
     let parsedUrls = [];
-
     if (url) {
-      if (typeof url === 'string') {
-        try {
-          parsedUrls = JSON.parse(url);
-        } catch (err) {
-          console.error('[URL Parse Error]', err);
-          return res.status(400).json({
-            success: false,
-            message: 'Invalid URL format. Should be a JSON array of objects.'
-          });
-        }
-      } else if (Array.isArray(url)) {
-        parsedUrls = url;
-      } else {
+      try {
+        parsedUrls = typeof url === 'string' ? JSON.parse(url) : url;
+      } catch (err) {
         return res.status(400).json({
           success: false,
-          message: 'URL field must be an array or JSON string.'
+          message: 'Invalid URL format. Must be JSON array.',
         });
       }
     }
 
-    // ✅ Safe handling of services field
-    let parsedServices = [];
+    // ✅ Upload each social image to Cloudinary
+    const socialImages = req.files?.social_images || [];
+    for (let i = 0; i < socialImages.length; i++) {
+      const file = socialImages[i];
 
-    if (services) {
-      if (typeof services === 'string') {
-        try {
-          parsedServices = JSON.parse(services);
-        } catch (err) {
-          console.error('[Services Parse Error]', err);
-          return res.status(400).json({
-            success: false,
-            message: 'Invalid services format. Should be a JSON array.'
-          });
+      const uploadResult = await cloudinary.uploader.upload(
+        file.path,
+        {
+          folder: "vendors/social_icons",
         }
-      } else if (Array.isArray(services)) {
-        parsedServices = services;
-      } else {
+      );
+
+      if (parsedUrls[i]) {
+        parsedUrls[i].image = uploadResult.secure_url;
+        console.log(`[Cloudinary] Social icon #${i} uploaded:`, parsedUrls[i].image);
+      }
+    }
+
+    // ✅ Parse `services` field
+    let parsedServices = [];
+    if (services) {
+      try {
+        parsedServices = typeof services === 'string' ? JSON.parse(services) : services;
+      } catch (err) {
         return res.status(400).json({
           success: false,
-          message: 'Services field must be an array or JSON string.'
+          message: 'Invalid services format. Should be JSON array.',
         });
       }
+    }
+
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({
+        success: false,
+        message: 'Unauthorized. Missing user info.',
+      });
     }
 
     const vendor = await Vendor.create({
@@ -82,53 +98,24 @@ exports.createVendor = async (req, res) => {
       image: imageUrl,
       url: parsedUrls,
       services: parsedServices,
-      createdBy: req.user._id
+      createdBy: req.user._id,
     });
 
     res.status(201).json({
       success: true,
       message: 'Vendor created successfully',
-      data: vendor
+      data: vendor,
     });
 
   } catch (error) {
     console.error('[Vendor Create Error]', error);
     res.status(500).json({
       success: false,
-      message: error.message
+      message: error.message || 'Internal Server Error',
     });
   }
 };
 
-exports.getVendorsByServiceAndCountry = async (req, res) => {
-  try {
-    const { service, country } = req.query;
-
-    if (!service || !country) {
-      return res.status(400).json({
-        success: false,
-        message: "Both service and country are required fields."
-      });
-    }
-
-    const vendors = await Vendor.find({
-      services: { $in: [service] },
-      country: country
-    }).sort({ createdAt: -1 });
-
-    res.status(200).json({
-      success: true,
-      count: vendors.length,
-      data: vendors
-    });
-  } catch (error) {
-    console.error('[Get Vendors Error]', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal Server Error'
-    });
-  }
-};
 
 exports.getAllVendors = async (req, res) => {
   try {
@@ -146,6 +133,32 @@ exports.getAllVendors = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Internal server error'
+    });
+  }
+};
+
+exports.getDashboardSummary = async (req, res) => {
+  try {
+    const usersCount = await User.countDocuments();
+    // const vendorsCount = await Vendor.countDocuments();
+    // const adsCount = await Ad.countDocuments();
+    // const servicesCount = await Service.countDocuments();
+
+    res.status(200).json({
+      success: true,
+      message: 'Dashboard summary fetched successfully',
+      data: {
+        usersCount,
+        // vendorsCount,
+        // adsCount,
+        // servicesCount,
+      }
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      message: "Server error"
     });
   }
 };

@@ -6,19 +6,19 @@ const portfolioSchema = new mongoose.Schema({
     required: true,
   },
   description: String,
-  serviceType: String, // e.g., Makeup, Photography
-  skillsUsed: [String], // e.g., ["Contouring", "HD Makeup"]
+  serviceType: String, 
+  skillsUsed: [String], 
   highlights: String,
   challengesFaced: String,
   location: String,
   date: Date,
-  duration: String, // e.g., "2 hours", "3 days"
-  images: [String], // Array of Cloudinary URLs
+  duration: String, 
+  images: [String], 
   videoLinks: [String],
   equipmentUsed: [String],
-  clientType: String, // e.g., Bridal, Corporate
+  clientType: String, 
   selfNote: String,
-  ratings: Number, // Optional rating (0–5)
+  ratings: Number, 
   isPracticeProject: {
     type: Boolean,
     default: false,

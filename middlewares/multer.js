@@ -4,13 +4,15 @@ const cloudinary = require('../config/cloudinary');
 
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
-  params: {
-    folder: 'wedding_services', // ya "vendors" depending on context
-    allowed_formats: ['jpg', 'jpeg', 'png'],
-    transformation: [{ width: 800, height: 800, crop: 'limit' }]
-  }
+  params: async (req, file) => {
+    return {
+      folder: 'wedding_services',
+      allowed_formats: ['jpg', 'jpeg', 'png'],
+      transformation: [{ width: 800, height: 800, crop: 'limit' }],
+    };
+  },
 });
 
-const upload = multer({ storage: storage });
+const parser = multer({ storage });
 
-module.exports = upload;
+module.exports = { parser };

@@ -84,27 +84,31 @@ function parseJson(value) {
   } catch {
     return [];
   }
-}
-
+}// controller/portfolioController.js
 
 exports.getUserPortfolios = async (req, res) => {
   try {
     const userId = req.user._id;
+    const serviceType = req.query.serviceType; 
 
-    const portfolios = await Portfolio.find({ createdBy: userId }).sort({
-      createdAt: -1
-    });
+    let filter = { createdBy: userId };
+
+    if (serviceType) {
+      filter.serviceType = serviceType;
+    }
+
+    const portfolios = await Portfolio.find(filter).sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,
       count: portfolios.length,
-      data: portfolios
+      data: portfolios,
     });
   } catch (error) {
     console.error('[Get User Portfolios Error]', error);
     res.status(500).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
