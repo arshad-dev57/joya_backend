@@ -18,4 +18,10 @@ router.get(
     uploadController.getAllUploads
   );
 
+router.delete(
+    '/delete/:id',
+    protect,
+    uploadController.deleteUpload
+  );
+
 module.exports = router;

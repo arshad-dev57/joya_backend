@@ -84,6 +84,7 @@ exports.signup = async (req, res) => {
         id: user._id,
         username: user.username,
         email: user.email,
+        country: user.country,
         role: user.role,
         country: user.country
       }
@@ -125,6 +126,45 @@ exports.getAllUsers = async (req, res) => {
     });
   } catch (error) {
     console.error('[Get Users Error]', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
+
+
+exports.deleteUser = async (req, res) => {
+  try {
+    const userId = req.params.id;
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID is required.'
+      });
+    }
+
+    const deletedUser = await User.findByIdAndDelete(userId);
+
+    if (!deletedUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found.'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'User deleted successfully.',
+      data: {
+        id: deletedUser._id,
+        username: deletedUser.username,
+        email: deletedUser.email
+      }
+    });
+  } catch (error) {
+    console.error('[Delete User Error]', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error'

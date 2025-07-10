@@ -17,7 +17,9 @@ exports.createPortfolio = async (req, res) => {
       equipmentUsed,
       clientType,
       selfNote,
-      ratings,
+      numberOfProjects,
+      timeEstimates,
+      estimatedCostRange,
       isPracticeProject,
       contactEnabled
     } = req.body;
@@ -29,7 +31,7 @@ exports.createPortfolio = async (req, res) => {
       });
     }
 
-    // Upload multiple images
+    // ✅ Upload multiple images
     let uploadedImages = [];
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
@@ -43,7 +45,7 @@ exports.createPortfolio = async (req, res) => {
     const portfolio = await Portfolio.create({
       title,
       description,
-      serviceType,
+      serviceType: parseJson(serviceType),
       skillsUsed: parseJson(skillsUsed),
       highlights,
       challengesFaced,
@@ -55,9 +57,18 @@ exports.createPortfolio = async (req, res) => {
       equipmentUsed: parseJson(equipmentUsed),
       clientType,
       selfNote,
-      ratings: ratings ? Number(ratings) : undefined,
+      numberOfProjects: numberOfProjects ? Number(numberOfProjects) : 1,
+      timeEstimates: parseJsonOrObject(timeEstimates, {
+        minHours: 1,
+        maxHours: 10
+      }),
+      estimatedCostRange: parseJsonOrObject(estimatedCostRange, {
+        min: 0,
+        max: 0,
+        currency: 'USD'
+      }),
       isPracticeProject: isPracticeProject === 'true',
-      contactEnabled: contactEnabled !== 'false', // default true
+      contactEnabled: contactEnabled !== 'false',
       createdBy: req.user._id
     });
 
@@ -75,7 +86,7 @@ exports.createPortfolio = async (req, res) => {
   }
 };
 
-// Helper to safely parse array strings from JSON
+// ✅ Helper to safely parse JSON arrays
 function parseJson(value) {
   if (!value) return [];
   try {
@@ -84,20 +95,49 @@ function parseJson(value) {
   } catch {
     return [];
   }
-}// controller/portfolioController.js
+}
+
+// ✅ Helper to safely parse JSON objects
+function parseJsonOrObject(value, defaultValue) {
+  if (!value) return defaultValue;
+  try {
+    if (typeof value === 'object') return value;
+    const parsed = JSON.parse(value);
+    return typeof parsed === 'object' ? parsed : defaultValue;
+  } catch {
+    return defaultValue;
+  }
+}
 
 exports.getUserPortfolios = async (req, res) => {
   try {
     const userId = req.user._id;
-    const serviceType = req.query.serviceType; 
+    const serviceType = req.query.serviceType;
 
     let filter = { createdBy: userId };
 
     if (serviceType) {
-      filter.serviceType = serviceType;
+      // Partial, case-insensitive match inside array of serviceType strings
+      filter.serviceType = {
+        $elemMatch: {
+          $regex: serviceType,
+          $options: 'i'
+        }
+      };
     }
 
+    console.log("[DEBUG] Portfolio Filter:", JSON.stringify(filter, null, 2));
+
     const portfolios = await Portfolio.find(filter).sort({ createdAt: -1 });
+
+    if (!portfolios.length) {
+      return res.status(404).json({
+        success: false,
+        message: serviceType
+          ? `No portfolios found for service type: ${serviceType}`
+          : "No portfolios found for this user.",
+      });
+    }
 
     res.status(200).json({
       success: true,
@@ -108,7 +148,29 @@ exports.getUserPortfolios = async (req, res) => {
     console.error('[Get User Portfolios Error]', error);
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: error.message || "Server error",
+    });
+  }
+};
+
+
+exports.getAllPortfoliosOfLoggedInUser = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    const portfolios = await Portfolio.find({ createdBy: userId })
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: portfolios.length,
+      data: portfolios,
+    });
+  } catch (error) {
+    console.error('[Get All User Portfolios Error]', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Server error",
     });
   }
 };

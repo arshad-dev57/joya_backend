@@ -17,5 +17,11 @@ router.get(
     portfolioController.getUserPortfolios
   );
 
+router.get(
+    '/getallportfolios',
+    protect,
+    portfolioController.getAllPortfoliosOfLoggedInUser
+  );
+
 module.exports = router;
 

@@ -7,5 +7,5 @@ const { protect } = require('../middlewares/authmiddleware');
 // Create service
 router.post('/createservice', protect, upload.single('imageUrl'), serviceController.createService);
 router.get('/getservices', serviceController.getAllServices);
-
+router.delete('/deleteservice/:id', protect, serviceController.deleteService);
 module.exports = router;

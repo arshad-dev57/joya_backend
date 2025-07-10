@@ -1,22 +1,44 @@
 const express = require('express');
 const router = express.Router();
 const vendorController = require('../controllers/vendor_controller');
-const parser = require('../middlewares/multer'); // multer setup
+const upload = require('../middlewares/multer'); // Multer config
 const { protect } = require('../middlewares/authmiddleware');
 
-// UPDATED: Add multer fields middleware here
+// ✅ Create Vendor with image and social images upload
 router.post(
   '/create',
   protect,
-  parser.fields([
-    { name: 'image', maxCount: 1 }, // for main profile image
-    { name: 'social_images', maxCount: 10 }, // for social icons
+  upload.fields([
+    { name: 'image', maxCount: 1 }, // Profile image
+    { name: 'social_images', maxCount: 10 }, // Multiple social media images
   ]),
-  vendorController.createVendor,
+  vendorController.createVendor
+);
+router.get(
+  '/getmyvendors',
+  protect,
+  vendorController.getVendorsByServiceAndCountry
 );
 
-router.get('/getmyvendors', protect, vendorController.getVendorsByServiceAndCountry);
 router.get('/getallvendors', vendorController.getAllVendors);
-router.get('/getdashboardsummary', protect, vendorController.getDashboardSummary);
 
+router.get(
+  '/getdashboardsummary',
+  protect,
+  vendorController.getDashboardSummary
+);
+
+router.put(
+  '/update/:id',
+  protect,
+  upload.fields([
+    { name: 'image', maxCount: 1 },
+    { name: 'social_images', maxCount: 10 },
+  ]),
+  vendorController.updateVendor
+);
+
+router.post('/linkportfolio', protect, vendorController.linkPortfolioToVendor);
+router.get('/getlinkedportfolios/:vendorId', protect, vendorController.getVendorlinkedPortfolios);
 module.exports = router;
+
