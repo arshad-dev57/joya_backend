@@ -1,7 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const { SALT_ROUNDS } = require('../config/constants');
-
 const userSchema = new mongoose.Schema({
   username: {
     type: String,
@@ -27,7 +26,7 @@ const userSchema = new mongoose.Schema({
   role: {
     type: String,
     required: true,
-    enum: ['user', 'vendor','admin',] 
+    enum: ['user', 'vendor','admin']
   },
   firstname: {
     type: String,
@@ -47,11 +46,17 @@ const userSchema = new mongoose.Schema({
     required: false,
     trim: true
   },
+  image: {
+    type: String,
+    required: false,
+    default: null
+  },
   createdAt: {
     type: Date,
     default: Date.now
   }
 });
+
 
 // Hash password before saving
 userSchema.pre('save', async function (next) {

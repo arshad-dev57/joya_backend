@@ -1,18 +1,27 @@
 const User = require('../models/usersmodel');
-const Vendor = require('../models/vendor'); // 👈 import vendor model
+const Vendor = require('../models/vendor');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    const cleanEmail = email?.trim().toLowerCase();
+    const loginValue = email?.trim().toLowerCase();
 
-    let user = await User.findOne({ email: cleanEmail }).select('+password');
+    let user = null;
     let userType = 'user';
 
+    // Try finding user by email first
+    user = await User.findOne({ email: loginValue }).select('+password');
+
     if (!user) {
-      user = await Vendor.findOne({ email: cleanEmail }).select('+password');
+      // If not found by email, try finding by username (case insensitive)
+      user = await User.findOne({ username: loginValue }).select('+password');
+    }
+
+    if (!user) {
+      // Check in Vendor model as well (by email only)
+      user = await Vendor.findOne({ email: loginValue }).select('+password');
       userType = 'vendor';
     }
 
@@ -38,7 +47,7 @@ exports.login = async (req, res) => {
       role: user.role || userType
     };
 
-    const token = jwt.sign(payload, process.env.JWT_SECRET); // no expiresIn
+    const token = jwt.sign(payload, process.env.JWT_SECRET);
 
     res.status(200).json({
       success: true,

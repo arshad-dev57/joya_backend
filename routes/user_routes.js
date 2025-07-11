@@ -11,4 +11,5 @@ router.get('/profile', protect, profilecontroller.getProfile);
 router.post('/logout', protect, userController.logout);
 router.get('/getallusers', userController.getAllUsers);
 router.delete('/deleteuser/:id', protect, userController.deleteUser);
+
 module.exports = router;
