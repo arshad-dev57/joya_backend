@@ -10,7 +10,7 @@ const vendorRoutes = require("./routes/vendor_routes");
 const reviewRoutes = require("./routes/review_routes");
 const portfolioRoutes = require("./routes/portfolio_routes");
 const addroutes = require('./routes/add_routes');
-
+const paymentroutes = require('./routes/payment_routes');
 const app = express();
 
 app.use(cors());
@@ -29,6 +29,7 @@ app.use("/api/vendors", vendorRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/portfolios", portfolioRoutes);
 app.use('/api/ad', addroutes);
+app.use('/api/payment', paymentroutes);
 
 dbConnection();
 

@@ -12,7 +12,6 @@ exports.createService = async (req, res) => {
       });
     }
 
-    // Local file path (multer provides this)
     const localPath = req.file.path;
 
     // Upload to Cloudinary

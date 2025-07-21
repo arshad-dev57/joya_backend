@@ -4,7 +4,6 @@ const uploadController = require('../controllers/add_controller');
 const { protect } = require('../middlewares/authmiddleware');
 const upload = require('../middlewares/multer');
 
-// Single image upload route
 router.post(
   '/createads',
   protect,

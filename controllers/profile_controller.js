@@ -8,6 +8,7 @@ exports.getProfile = async (req, res) => {
           name: user.firstname + ' ' + user.lastname,
           email: user.email,
           role: user.role,
+          paymentStatus: user.paymentStatus,
           phone: user.phone || null
         }
       });

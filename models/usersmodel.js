@@ -51,14 +51,17 @@ const userSchema = new mongoose.Schema({
     required: false,
     default: null
   },
+  paymentStatus: {
+    type: String,
+    enum: ['paid', 'unpaid'],
+    default: 'unpaid'
+  },
   createdAt: {
     type: Date,
     default: Date.now
   }
 });
 
-
-// Hash password before saving
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
 

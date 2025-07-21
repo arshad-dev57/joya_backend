@@ -11,5 +11,5 @@ router.get('/profile', protect, profilecontroller.getProfile);
 router.post('/logout', protect, userController.logout);
 router.get('/getallusers', userController.getAllUsers);
 router.delete('/deleteuser/:id', protect, userController.deleteUser);
-
+router.put('/updatepaymentstatus', protect, userController.updatePaymentStatus);
 module.exports = router;
