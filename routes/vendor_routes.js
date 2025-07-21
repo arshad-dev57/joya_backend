@@ -4,7 +4,6 @@ const vendorController = require('../controllers/vendor_controller');
 const upload = require('../middlewares/multer'); // Multer config
 const { protect } = require('../middlewares/authmiddleware');
 
-// ✅ Create Vendor with image and social images upload
 router.post(
   '/create',
   protect,

@@ -7,21 +7,7 @@ exports.createPortfolio = async (req, res) => {
       title,
       description,
       serviceType,
-      skillsUsed,
-      highlights,
-      challengesFaced,
-      location,
-      date,
-      duration,
-      videoLinks,
-      equipmentUsed,
-      clientType,
-      selfNote,
-      numberOfProjects,
-      timeEstimates,
-      estimatedCostRange,
-      isPracticeProject,
-      contactEnabled
+     
     } = req.body;
 
     if (!title) {
@@ -30,8 +16,6 @@ exports.createPortfolio = async (req, res) => {
         message: 'Title is required'
       });
     }
-
-    // ✅ Upload multiple images
     let uploadedImages = [];
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
@@ -46,29 +30,7 @@ exports.createPortfolio = async (req, res) => {
       title,
       description,
       serviceType: parseJson(serviceType),
-      skillsUsed: parseJson(skillsUsed),
-      highlights,
-      challengesFaced,
-      location,
-      date,
-      duration,
       images: uploadedImages,
-      videoLinks: parseJson(videoLinks),
-      equipmentUsed: parseJson(equipmentUsed),
-      clientType,
-      selfNote,
-      numberOfProjects: numberOfProjects ? Number(numberOfProjects) : 1,
-      timeEstimates: parseJsonOrObject(timeEstimates, {
-        minHours: 1,
-        maxHours: 10
-      }),
-      estimatedCostRange: parseJsonOrObject(estimatedCostRange, {
-        min: 0,
-        max: 0,
-        currency: 'USD'
-      }),
-      isPracticeProject: isPracticeProject === 'true',
-      contactEnabled: contactEnabled !== 'false',
       createdBy: req.user._id
     });
 
@@ -85,8 +47,6 @@ exports.createPortfolio = async (req, res) => {
     });
   }
 };
-
-// ✅ Helper to safely parse JSON arrays
 function parseJson(value) {
   if (!value) return [];
   try {
@@ -96,8 +56,6 @@ function parseJson(value) {
     return [];
   }
 }
-
-// ✅ Helper to safely parse JSON objects
 function parseJsonOrObject(value, defaultValue) {
   if (!value) return defaultValue;
   try {

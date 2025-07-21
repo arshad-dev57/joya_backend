@@ -10,6 +10,7 @@ const vendorSchema = new mongoose.Schema({
   code: String,
   country: String,
   description: String,
+  paymentlink  :String,
   image: String,
   services: [String],
   url: [{
@@ -28,8 +29,6 @@ const vendorSchema = new mongoose.Schema({
     required: true,
     select: false
   },
-
-  // 🔴 NEW: Full embedded portfolios
   linkedPortfolios: {
     type: [mongoose.Schema.Types.Mixed], // to hold full object
     default: []

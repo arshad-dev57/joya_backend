@@ -16,6 +16,7 @@ exports.createVendor = async (req, res) => {
       description,
       url,
       services,
+      paymentlink,
       password
     } = req.body;
 
@@ -85,7 +86,6 @@ exports.createVendor = async (req, res) => {
       });
     }
 
-    // ✅ Hash password before save
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const vendor = await Vendor.create({
@@ -98,9 +98,10 @@ exports.createVendor = async (req, res) => {
       country,
       description,
       image: imageUrl,
+      paymentlink,
       url: parsedUrls,
       services: parsedServices,
-      password: hashedPassword,         // ✅ hashed password
+      password: hashedPassword,         
       createdBy: req.user._id,
     });
 

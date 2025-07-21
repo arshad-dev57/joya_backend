@@ -11,16 +11,13 @@ exports.login = async (req, res) => {
     let user = null;
     let userType = 'user';
 
-    // Try finding user by email first
     user = await User.findOne({ email: loginValue }).select('+password');
 
     if (!user) {
-      // If not found by email, try finding by username (case insensitive)
       user = await User.findOne({ username: loginValue }).select('+password');
     }
 
     if (!user) {
-      // Check in Vendor model as well (by email only)
       user = await Vendor.findOne({ email: loginValue }).select('+password');
       userType = 'vendor';
     }
@@ -54,6 +51,7 @@ exports.login = async (req, res) => {
       message: 'Login successful',
       token,
       data: {
+        firstname: user.firstname,
         id: user._id,
         username: user.username,
         email: user.email,
