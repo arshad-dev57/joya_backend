@@ -42,7 +42,7 @@ exports.getVendorReviews = async (req, res) => {
   try {
     const vendorId = req.params.vendorId;
 
-    const reviews = await Review.find({ vendorId }).populate('userId', 'name email');
+    const reviews = await Review.find({ vendorId }).populate('userId', 'firstname lastname email');
 
     res.status(200).json({
       success: true,

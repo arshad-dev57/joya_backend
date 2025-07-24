@@ -3,6 +3,8 @@ const cloudinary = require('../config/cloudinary');
 const Portfolio = require('../models/portfolio');
 const bcrypt = require('bcrypt');
 
+const User = require('../models/usersmodel'); // Make sure it's imported
+
 exports.createVendor = async (req, res) => {
   try {
     const {
@@ -20,80 +22,62 @@ exports.createVendor = async (req, res) => {
       password
     } = req.body;
 
-    console.log("[DEBUG] Incoming Fields:", req.body);
-    console.log("[DEBUG] Incoming Files:", Object.keys(req.files || {}));
+    const cleanEmail = email?.trim().toLowerCase();
+    const cleanUsername = username?.trim();
+    const cleanPhone = phone_number?.trim();
+
+    // Check if already exists in User
+    const existingUser = await User.findOne({
+      $or: [
+        { email: cleanEmail },
+        { username: cleanUsername },
+        { phone: cleanPhone }
+      ]
+    });
 
     let imageUrl = null;
-
     if (req.files?.image?.[0]) {
       const uploadResult = await cloudinary.uploader.upload(
         req.files.image[0].path,
-        {
-          folder: "vendors/main_images",
-        }
+        { folder: "vendors/main_images" }
       );
       imageUrl = uploadResult.secure_url;
-      console.log("[Cloudinary] Main image uploaded:", imageUrl);
-    } else {
-      console.log("[Cloudinary] No main image uploaded.");
     }
 
     let parsedUrls = [];
     if (url) {
-      try {
-        parsedUrls = typeof url === 'string' ? JSON.parse(url) : url;
-      } catch (err) {
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid URL format. Must be JSON array.',
-        });
-      }
+      parsedUrls = typeof url === 'string' ? JSON.parse(url) : url;
     }
 
     const socialImages = req.files?.social_images || [];
     for (let i = 0; i < socialImages.length; i++) {
       const file = socialImages[i];
-
       const uploadResult = await cloudinary.uploader.upload(
         file.path,
-        {
-          folder: "vendors/social_icons",
-        }
+        { folder: "vendors/social_icons" }
       );
-
       if (parsedUrls[i]) {
         parsedUrls[i].image = uploadResult.secure_url;
-        console.log(`[Cloudinary] Social icon #${i} uploaded:`, parsedUrls[i].image);
       }
     }
 
     let parsedServices = [];
     if (services) {
-      try {
-        parsedServices = typeof services === 'string' ? JSON.parse(services) : services;
-      } catch (err) {
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid services format. Should be JSON array.',
-        });
-      }
+      parsedServices = typeof services === 'string' ? JSON.parse(services) : services;
     }
-
     if (!req.user || !req.user._id) {
       return res.status(401).json({
         success: false,
         message: 'Unauthorized. Missing user info.',
       });
     }
-
     const hashedPassword = await bcrypt.hash(password, 10);
-
     const vendor = await Vendor.create({
       firstname,
       lastname,
-      username,
-      email,
-      phone_number,
+      username: cleanUsername,
+      email: cleanEmail,
+      phone_number: cleanPhone,
       code,
       country,
       description,
@@ -101,13 +85,28 @@ exports.createVendor = async (req, res) => {
       paymentlink,
       url: parsedUrls,
       services: parsedServices,
-      password: hashedPassword,         
+      password: hashedPassword,
       createdBy: req.user._id,
     });
+    if (existingUser) {
+      await User.findByIdAndUpdate(existingUser._id, { role: 'vendor' });
+    } else {
+      await User.create({
+        username: cleanUsername,
+        email: cleanEmail,
+        password: hashedPassword,
+        phone: cleanPhone,
+        country: [country],
+        language: 'en',
+        role: 'vendor',
+        firstname,
+        lastname,
+      });
+    }
 
     res.status(201).json({
       success: true,
-      message: 'Vendor created successfully',
+      message: 'Vendor created successfully and synced with User',
       data: vendor,
     });
 
@@ -119,6 +118,7 @@ exports.createVendor = async (req, res) => {
     });
   }
 };
+
 
 exports.getAllVendors = async (req, res) => {
   try {

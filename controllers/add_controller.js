@@ -10,15 +10,13 @@ exports.uploadImage = async (req, res) => {
       });
     }
 
-    // Upload to Cloudinary
     const result = await cloudinary.uploader.upload(req.file.path, {
       folder: 'single_uploads'
     });
 
-    // Save URL to DB
     const upload = await Upload.create({
       imageUrl: result.secure_url,
-      publicId: result.public_id,          // ✅ save public_id for later delete
+      publicId: result.public_id,         
       uploadedBy: req.user._id
     });
 
