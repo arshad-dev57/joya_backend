@@ -21,7 +21,7 @@ exports.addReview = async (req, res) => {
       rating
 
     });
-        const populatedReview = await Review.findById(review._id).populate('userId', 'email');
+        const populatedReview = await Review.findById(review._id).populate('userId', 'firstname');
     
     res.status(201).json({
       success: true,
@@ -43,7 +43,7 @@ exports.getVendorReviews = async (req, res) => {
   try {
     const vendorId = req.params.vendorId;
 
-    const reviews = await Review.find({ vendorId }).populate('userId', 'firstname lastname email image ');
+    const reviews = await Review.find({ vendorId }).populate('userId', 'firstname lastname email ');
 
     res.status(200).json({
       success: true,
