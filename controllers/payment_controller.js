@@ -88,6 +88,7 @@ exports.createpaymentlink = async (req, res) => {
     });
   }
 };
+
 exports.deletePaymentLink = async (req, res) => {
   try {
     const linkId = req.params.id;

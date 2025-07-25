@@ -59,6 +59,7 @@ exports.login = async (req, res) => {
         email: user.email,
         role: user.role || userType,
         country: user.country || null,
+        image: user.image || null
       }
     });
 

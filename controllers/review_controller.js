@@ -19,6 +19,7 @@ exports.addReview = async (req, res) => {
       userId,
       comment,
       rating
+
     });
         const populatedReview = await Review.findById(review._id).populate('userId', 'email');
     
@@ -42,12 +43,13 @@ exports.getVendorReviews = async (req, res) => {
   try {
     const vendorId = req.params.vendorId;
 
-    const reviews = await Review.find({ vendorId }).populate('userId', 'firstname lastname email');
+    const reviews = await Review.find({ vendorId }).populate('userId', 'firstname lastname email image ');
 
     res.status(200).json({
       success: true,
       count: reviews.length,
       data: reviews
+      
     });
   } catch (error) {
     console.error('[Get Vendor Reviews Error]', error);

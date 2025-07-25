@@ -4,6 +4,7 @@ const Vendor = require('../models/vendor');
 const Ad = require('../models/add');
 const Service = require('../models/service');
 const PaymentLink = require('../models/payment');
+const cloudinary = require('../config/cloudinary');
 exports.signup = async (req, res) => {
   try {
     const {
@@ -217,6 +218,47 @@ exports.updatePaymentStatus = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Internal server error'
+    });
+  }
+};
+
+exports.updateUserImage = async (req, res) => {
+  try {
+    const userId = req.params.id; 
+    const imgPath = req.file.path;
+
+    console.log(imgPath, userId);
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID is required.'
+      });
+    }
+    const result = await cloudinary.uploader.upload(imgPath);
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { image: result.secure_url }, 
+      { new: true }
+    ).select('-password');
+
+    if (!updatedUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found.'
+      });
+    }
+    res.status(200).json({
+      success: true,
+      message: 'User image updated successfully',
+      data: updatedUser
+    });
+
+  } catch (error) {
+    console.error('[Update User Image Error]', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
     });
   }
 };

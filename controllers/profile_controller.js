@@ -9,7 +9,8 @@ exports.getProfile = async (req, res) => {
           email: user.email,
           role: user.role,
           paymentStatus: user.paymentStatus,
-          phone: user.phone || null
+          phone: user.phone || null,
+          image: user.image || null
         }
       });
     } catch (error) {
