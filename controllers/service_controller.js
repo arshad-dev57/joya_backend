@@ -8,37 +8,35 @@ exports.createService = async (req, res) => {
     if (!req.file) {
       return res.status(400).json({
         success: false,
-        message: 'Image is required'
+        message: 'Image is required',
       });
     }
 
-    const localPath = req.file.path;
+    // CloudinaryStorage via multer already uploaded the file
+    const imageUrl = req.file.path; // ✅ this is already a Cloudinary URL
 
-    // Upload to Cloudinary
-    const result = await cloudinary.uploader.upload(localPath, {
-      folder: 'wedding_services'
-    });
-
-    console.log(result, title);
+    console.log("Image uploaded to Cloudinary:", imageUrl);
+    console.log("Title:", title);
 
     const service = await Service.create({
       title,
-      imageUrl: result.secure_url
+      imageUrl,
     });
 
     res.status(201).json({
       success: true,
       message: 'Service created successfully',
-      data: service
+      data: service,
     });
   } catch (error) {
     console.error('[Service Create Error]', error);
     res.status(500).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
+
 
 exports.getAllServices = async (req, res) => {
   try {
