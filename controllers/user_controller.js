@@ -3,7 +3,7 @@
 
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
-
+const mongoose = require('mongoose');
 const User = require('../models/usersmodel');     // your user model (updated with status/tokenVersion)
 const Vendor = require('../models/vendor');
 const Ad = require('../models/add');
@@ -174,23 +174,91 @@ exports.getAllUsers = async (req, res) => {
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
-
 exports.deleteUser = async (req, res) => {
+  const session = await mongoose.startSession();
   try {
     const userId = req.params.id;
-    if (!userId) return res.status(400).json({ success: false, message: 'User ID is required.' });
+    if (!userId) {
+      session.endSession();
+      return res.status(400).json({ success: false, message: 'User ID is required.' });
+    }
 
-    const deletedUser = await User.findByIdAndDelete(userId);
-    if (!deletedUser) return res.status(404).json({ success: false, message: 'User not found.' });
+    let resultPayload = {
+      user: null,
+      vendor: null,
+    };
 
-    res.status(200).json({
+    await session.withTransaction(async () => {
+      // 1) Get the user first (inside txn)
+      const user = await User.findById(userId).session(session);
+      if (!user) {
+        throw new Error('NOT_FOUND_USER');
+      }
+
+      // 2) If user looks like vendor, delete the linked Vendor too
+      //    We try common link fields: vendorId/createdBy/email/username to be extra-safe.
+      const isVendor =
+        String(user.role || '').toLowerCase() === 'vendor' ||
+        String(user.type || '').toLowerCase() === 'vendor';
+
+      let deletedVendor = null;
+      if (isVendor) {
+        deletedVendor = await Vendor.findOneAndDelete(
+          {
+            $or: [
+              { vendorId: user._id },
+              { createdBy: user._id },
+              { email: user.email },
+              { username: user.username },
+            ],
+          },
+          { session }
+        );
+        resultPayload.vendor = deletedVendor
+          ? { id: deletedVendor._id, username: deletedVendor.username, email: deletedVendor.email }
+          : null;
+      } else {
+        // Optional: even if role/type not vendor, you can still clean any stray vendor linked to this userId
+        // Comment out if you want strict role check only
+        const strayVendor = await Vendor.findOneAndDelete(
+          { $or: [{ vendorId: user._id }, { createdBy: user._id }] },
+          { session }
+        );
+        if (strayVendor) {
+          resultPayload.vendor = { id: strayVendor._id, username: strayVendor.username, email: strayVendor.email };
+        }
+      }
+
+      // 3) Finally delete the user
+      const deletedUser = await User.findByIdAndDelete(userId, { session });
+      // This should exist because we fetched it, but extra guard:
+      if (!deletedUser) throw new Error('NOT_FOUND_USER');
+
+      resultPayload.user = {
+        id: deletedUser._id,
+        username: deletedUser.username,
+        email: deletedUser.email,
+      };
+    });
+
+    session.endSession();
+
+    return res.status(200).json({
       success: true,
-      message: 'User deleted successfully.',
-      data: { id: deletedUser._id, username: deletedUser.username, email: deletedUser.email }
+      message: resultPayload.vendor
+        ? 'User and linked vendor deleted successfully.'
+        : 'User deleted successfully.',
+      data: resultPayload,
     });
   } catch (error) {
+    session.endSession();
+
+    if (error && error.message === 'NOT_FOUND_USER') {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+
     console.error('[Delete User Error]', error);
-    res.status(500).json({ success: false, message: 'Internal server error' });
+    return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
 
