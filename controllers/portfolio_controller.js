@@ -32,6 +32,7 @@ exports.createPortfolio = async (req, res) => {
       serviceType: parseJson(serviceType),
       images: uploadedImages,
       createdBy: req.user._id
+
     });
 
     res.status(201).json({

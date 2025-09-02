@@ -37,39 +37,40 @@ exports.createService = async (req, res) => {
   }
 };
 
-
-exports.getAllServices = async (req, res) => {
+// GET /services/withCounts?country=UAE
+exports.getServicesWithCounts = async (req, res) => {
   try {
-    const services = await Service.find().sort({ createdAt: -1 });
+    const { country } = req.query;
 
-    // Har service ke liye vendor count nikalo
-    const servicesWithVendorCount = await Promise.all(
-      services.map(async (service) => {
-        const count = await Vendor.countDocuments({
-          services: service.title
-        });
+    // 1) Get all service titles
+    const services = await Service.find({}, { title: 1, imageUrl: 1, createdAt: 1 }).sort({ createdAt: -1 }).lean();
+    const titles = services.map(s => s.title);
 
-        return {
-          _id: service._id,
-          title: service.title,
-          imageUrl: service.imageUrl,
-          createdAt: service.createdAt,
-          vendorCount: count
-        };
-      })
-    );
+    // 2) Aggregate vendor counts grouped by service title
+    const match = { services: { $in: titles } };
+    if (country && country.trim()) match.country = country.trim();
 
-    res.status(200).json({
-      success: true,
-      count: servicesWithVendorCount.length,
-      data: servicesWithVendorCount
-    });
-  } catch (error) {
-    console.error('[Get Services Error]', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
+    const counts = await Vendor.aggregate([
+      { $match: match },
+      { $unwind: '$services' },
+      { $match: { services: { $in: titles } } },
+      { $group: { _id: '$services', count: { $sum: 1 } } },
+    ]);
+
+    const countMap = new Map(counts.map(c => [c._id, c.count]));
+
+    const payload = services.map(s => ({
+      _id: s._id,
+      title: s.title,
+      imageUrl: s.imageUrl,
+      createdAt: s.createdAt,
+      vendorCount: countMap.get(s.title) || 0,
+    }));
+
+    return res.status(200).json({ success: true, count: payload.length, data: payload });
+  } catch (err) {
+    console.error('[Get Services With Counts Error]', err);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
 

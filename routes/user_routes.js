@@ -15,4 +15,6 @@ router.get('/getallusers', userController.getAllUsers);
 router.delete('/deleteuser/:id', protect, userController.deleteUser);
 router.put('/updatepaymentstatus', protect, userController.updatePaymentStatus);
 router.put('/updateuserimage/:id', protect, upload.single('image'), userController.updateUserImage);
+router.put('/setuserstatus/:id', protect, userController.setUserStatus);
+router.get('/getuserbyid/:id', protect, userController.getUserById);
 module.exports = router;

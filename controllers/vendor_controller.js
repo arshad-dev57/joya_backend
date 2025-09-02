@@ -5,6 +5,9 @@ const bcrypt = require('bcrypt');
 
 const User = require('../models/usersmodel'); // Make sure it's imported
 
+const { protect } = require('../middlewares/authmiddleware');
+
+
 exports.createVendor = async (req, res) => {
   try {
     const {
@@ -19,100 +22,124 @@ exports.createVendor = async (req, res) => {
       url,
       services,
       paymentlink,
-      password
+      password,
     } = req.body;
 
-    const cleanEmail = email?.trim().toLowerCase();
-    const cleanUsername = username?.trim();
-    const cleanPhone = phone_number?.trim();
+    // ---- sanitize helpers ----
+    const s = v => (typeof v === 'string' ? v.trim() : '');
 
-    // Check if already exists in User
-    const existingUser = await User.findOne({
-      $or: [
-        { email: cleanEmail },
-        { username: cleanUsername },
-        { phone: cleanPhone }
-      ]
-    });
+    const cleanEmail    = s(email).toLowerCase();
+    const cleanUsername = s(username);
+    const cleanPhone    = s(phone_number);
+    const cleanFirst    = s(firstname);
+    const cleanLast     = s(lastname);
+    const cleanCode     = s(code);
+    const cleanCountry  = s(country);
+    const cleanDesc     = s(description);
+    const cleanPayLink  = s(paymentlink);
 
-    let imageUrl = null;
+    // ---- check duplicate vendor ----
+    const orClauses = [];
+    if (cleanEmail)    orClauses.push({ email: cleanEmail });
+    if (cleanUsername) orClauses.push({ username: cleanUsername });
+    if (cleanPhone)    orClauses.push({ phone_number: cleanPhone });
+
+    const existingVendor = orClauses.length
+      ? await Vendor.findOne({ $or: orClauses })
+      : null;
+
+    if (existingVendor) {
+      return res.status(400).json({ success: false, message: 'Vendor already exists' });
+    }
+
+    // ---- main image upload ----
+    let imageUrl = '';
     if (req.files?.image?.[0]) {
       const uploadResult = await cloudinary.uploader.upload(
         req.files.image[0].path,
-        { folder: "vendors/main_images" }
+        { folder: 'vendors/main_images' }
       );
-      imageUrl = uploadResult.secure_url;
+      imageUrl = uploadResult?.secure_url || '';
     }
 
+    // ---- parse social urls ----
     let parsedUrls = [];
     if (url) {
-      parsedUrls = typeof url === 'string' ? JSON.parse(url) : url;
+      try {
+        parsedUrls = typeof url === 'string' ? JSON.parse(url) : url;
+        if (!Array.isArray(parsedUrls)) parsedUrls = [];
+      } catch {
+        parsedUrls = [];
+      }
     }
 
+    // ---- attach social images ----
     const socialImages = req.files?.social_images || [];
     for (let i = 0; i < socialImages.length; i++) {
       const file = socialImages[i];
       const uploadResult = await cloudinary.uploader.upload(
         file.path,
-        { folder: "vendors/social_icons" }
+        { folder: 'vendors/social_icons' }
       );
+      const iconUrl = uploadResult?.secure_url || '';
       if (parsedUrls[i]) {
-        parsedUrls[i].image = uploadResult.secure_url;
+        parsedUrls[i].image = iconUrl;
+        parsedUrls[i].name = s(parsedUrls[i].name);
+        parsedUrls[i].url  = s(parsedUrls[i].url);
+      } else {
+        parsedUrls.push({ name: '', url: '', image: iconUrl });
       }
     }
 
+    // ---- parse services ----
     let parsedServices = [];
     if (services) {
-      parsedServices = typeof services === 'string' ? JSON.parse(services) : services;
-    }
-    if (!req.user || !req.user._id) {
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized. Missing user info.',
-      });
-    }
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const vendor = await Vendor.create({
-      firstname,
-      lastname,
-      username: cleanUsername,
-      email: cleanEmail,
-      phone_number: cleanPhone,
-      code,
-      country,
-      description,
-      image: imageUrl,
-      paymentlink,
-      url: parsedUrls,
-      services: parsedServices,
-      password: hashedPassword,
-      createdBy: req.user._id,
-    });
-    if (existingUser) {
-      await User.findByIdAndUpdate(existingUser._id, { role: 'vendor' });
-    } else {
-      await User.create({
-        username: cleanUsername,
-        email: cleanEmail,
-        password: hashedPassword,
-        phone: cleanPhone,
-        country: [country],
-        language: 'en',
-        role: 'vendor',
-        firstname,
-        lastname,
-      });
+      try {
+        parsedServices = typeof services === 'string' ? JSON.parse(services) : services;
+        if (!Array.isArray(parsedServices)) parsedServices = [];
+        parsedServices = parsedServices.map(svc => s(svc)).filter(Boolean);
+      } catch {
+        parsedServices = [];
+      }
     }
 
-    res.status(201).json({
+    // ---- check auth ----
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({ success: false, message: 'Unauthorized. Missing user info.' });
+    }
+
+    const hashedPassword = await bcrypt.hash(String(password ?? ''), 10);
+
+    const vendorPayload = {
+
+      firstname   : cleanFirst,
+      lastname    : cleanLast,
+      username    : cleanUsername,
+      email       : cleanEmail,
+      phone_number: cleanPhone,
+      code        : cleanCode,
+      country     : cleanCountry,
+      description : cleanDesc,
+      paymentlink : cleanPayLink,
+      image       : imageUrl,
+      services    : parsedServices,
+      url         : parsedUrls,
+      password    : hashedPassword,
+      createdBy   : req.user._id,  
+      vendorId    : req.user._id,
+    };
+
+    const vendor = await Vendor.create(vendorPayload);
+
+    return res.status(201).json({
       success: true,
-      message: 'Vendor created successfully and synced with User',
+      message: 'Vendor created successfully',
       data: vendor,
     });
 
   } catch (error) {
     console.error('[Vendor Create Error]', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: error.message || 'Internal Server Error',
     });
